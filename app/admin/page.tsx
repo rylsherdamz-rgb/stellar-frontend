@@ -1,88 +1,133 @@
 "use client";
+
+import Link from "next/link";
 import { useState } from "react";
-import { scanNfc } from "@/lib/nfc"; // Using the utility we created earlier
-import { toast, Toaster } from "sonner";
-import { UserPlus, ShieldCheck, Database } from "lucide-react";
+import { scanNfc } from "@/lib/nfc";
+
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000/api";
 
 export default function AdminPortal() {
-  const [form, setForm] = useState({ name: "", wallet: "", nfcHash: "" });
-  const [loading, setLoading] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [studentAddress, setStudentAddress] = useState("");
+  const [certificateHash, setCertificateHash] = useState("");
+  const [rewardAmount, setRewardAmount] = useState("100");
+  const [status, setStatus] = useState("Ready to register a certificate.");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleScan = async () => {
+  async function handleScan() {
+    setStatus("Scanning NFC card...");
+
     try {
       const hash = await scanNfc();
-      setForm({ ...form, nfcHash: hash });
-      toast.success("NFC Card Linked Successfully");
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-  };
+      setCertificateHash(hash);
 
-  const registerOnChain = async () => {
-    if (!form.nfcHash || !form.wallet) return toast.error("Missing Data");
-    setLoading(true);
+      await fetch(`${BACKEND_BASE_URL}/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nfc_hash: hash }),
+      });
+
+      setStatus("Certificate hash captured and synced.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to scan NFC card.");
+    }
+  }
+
+  async function handleRegister() {
+    if (!studentName || !studentAddress || !certificateHash) {
+      setStatus("Student name, wallet, and certificate hash are required.");
+      return;
+    }
+
+    setIsLoading(true);
+    setStatus("Registering certificate...");
+
     try {
-      const res = await fetch("http://localhost:3000/register", {
+      const response = await fetch(`${BACKEND_BASE_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          citizen_addr: form.wallet,
-          citizen_id: form.name,
-          nfc_hash: form.nfcHash,
+          student_name: studentName,
+          student_addr: studentAddress,
+          certificate_hash: certificateHash,
+          reward_amount: Number(rewardAmount) || 0,
         }),
       });
-      if (res.ok) toast.success("Citizen Registered on Stellar");
-    } catch (err) {
-      toast.error("Backend Error");
+      const data = (await response.json()) as { status: string; message: string };
+      setStatus(data.message);
+    } catch {
+      setStatus("Backend request failed.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-white text-black p-8 font-mono">
-      <Toaster />
-      <div className="max-w-2xl mx-auto border-4 border-black p-10 space-y-10">
-        <header className="border-b-4 border-black pb-4">
-          <h1 className="text-5xl font-black uppercase tracking-tighter">Admin : Registrar</h1>
-        </header>
-
-        <div className="grid gap-6">
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase">Full Name / ID</label>
-            <input
-              className="w-full border-2 border-black p-3 outline-none focus:bg-zinc-100"
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
+    <main className="min-h-screen px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow)] sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
+              Issuer console
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
+              Admin registration
+            </h1>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase">Stellar Wallet Address</label>
-            <input
-              className="w-full border-2 border-black p-3 outline-none focus:bg-zinc-100"
-              placeholder="G..."
-              onChange={(e) => setForm({ ...form, wallet: e.target.value })}
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              onClick={handleScan}
-              className="flex-1 border-2 border-black p-4 font-bold hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2"
-            >
-              <Database size={18} /> {form.nfcHash ? "Card Ready" : "Scan NFC Card"}
-            </button>
-
-            <button
-              onClick={registerOnChain}
-              disabled={loading}
-              className="flex-1 bg-black text-white p-4 font-bold uppercase hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              <ShieldCheck size={18} /> {loading ? "Syncing..." : "Finalize Binding"}
-            </button>
-          </div>
+          <Link
+            href="/"
+            className="rounded-full border border-[var(--line)] px-4 py-2 text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+          >
+            Back to dashboard
+          </Link>
         </div>
+
+        <div className="mt-8 grid gap-4">
+          <input
+            value={studentName}
+            onChange={(event) => setStudentName(event.target.value)}
+            placeholder="Student name"
+            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
+          />
+          <input
+            value={studentAddress}
+            onChange={(event) => setStudentAddress(event.target.value)}
+            placeholder="Stellar wallet"
+            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
+          />
+          <input
+            value={certificateHash}
+            onChange={(event) => setCertificateHash(event.target.value)}
+            placeholder="Certificate hash"
+            className="field-shell min-h-12 rounded-2xl px-4 font-mono outline-none"
+          />
+          <input
+            value={rewardAmount}
+            onChange={(event) => setRewardAmount(event.target.value)}
+            placeholder="Reward amount"
+            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
+          />
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={handleScan}
+            className="min-h-12 flex-1 rounded-full bg-[var(--signal)] px-5 text-sm font-medium text-white transition hover:brightness-95"
+          >
+            Scan NFC card
+          </button>
+          <button
+            onClick={handleRegister}
+            disabled={isLoading}
+            className="min-h-12 flex-1 rounded-full bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? "Registering..." : "Register certificate"}
+          </button>
+        </div>
+
+        <p className="mt-5 text-sm leading-6 text-[var(--muted)]">{status}</p>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3efe4;
+  --foreground: #15110f;
+  --panel: rgba(255, 250, 241, 0.82);
+  --panel-strong: rgba(255, 248, 235, 0.94);
+  --line: rgba(33, 24, 20, 0.12);
+  --muted: rgba(21, 17, 15, 0.66);
+  --accent: #0f766e;
+  --accent-strong: #0b4f4a;
+  --signal: #c96f2d;
+  --success: #14532d;
+  --shadow: 0 22px 70px rgba(33, 24, 20, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(201, 111, 45, 0.22), transparent 32rem),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.16), transparent 28rem),
+    linear-gradient(180deg, #f7f1e5 0%, #f3efe4 48%, #ebe3d4 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.grain-overlay::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+  background-size: 10px 10px;
+  mix-blend-mode: multiply;
+}
+
+.ledger-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.field-shell {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.signal-pill {
+  border: 1px solid rgba(21, 17, 15, 0.08);
+  background: rgba(255, 250, 241, 0.76);
+}
+
+.hero-number {
+  color: rgba(21, 17, 15, 0.24);
+  font-family: "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+}
+
+.status-success {
+  color: var(--success);
+}
+
+.status-error {
+  color: #991b1b;
+}
+
+.status-neutral {
+  color: var(--muted);
 }

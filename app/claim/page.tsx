@@ -1,78 +1,120 @@
 "use client";
+
+import Link from "next/link";
 import { useState } from "react";
-import { isConnected, getAddress, signTransaction } from "@stellar/freighter-api";
-import { toast, Toaster } from "sonner";
-import { Fingerprint, CreditCard, CheckCircle } from "lucide-react";
+import { scanNfc } from "@/lib/nfc";
 
-export default function ClaimAyuda() {
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000/api";
 
-  const startClaim = async () => {
+export default function ClaimPage() {
+  const [studentAddress, setStudentAddress] = useState("");
+  const [certificateHash, setCertificateHash] = useState("");
+  const [status, setStatus] = useState("Ready to verify a student's credential.");
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleScan() {
+    setStatus("Scanning NFC card...");
+
     try {
-      setLoading(true);
+      const hash = await scanNfc();
+      setCertificateHash(hash);
+      setStatus("Certificate hash captured from NFC card.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Unable to scan NFC card.");
+    }
+  }
 
-      // 1. Check Wallet
-      if (!(await isConnected())) throw new Error("Install Freighter");
-      const userAddr = await getAddress();
+  async function handleVerify() {
+    if (!studentAddress || !certificateHash) {
+      setStatus("Student wallet and certificate hash are required.");
+      return;
+    }
 
-      // 2. Scan NFC Card
-      toast.info("Please tap your NFC card to the back of your phone...");
-      const ndef = new (window as any).NDEFReader();
-      await ndef.scan();
+    setIsLoading(true);
+    setStatus("Verifying credential on Soroban...");
 
-      ndef.onreading = async (event: any) => {
-        const serial = event.serialNumber;
-        const nfcHash = await hashSerial(serial);
+    try {
+      const response = await fetch(`${BACKEND_BASE_URL}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_addr: studentAddress,
+          certificate_hash: certificateHash,
+        }),
+      });
 
-        // 3. Request Signature from Freighter
-        // In a real app, you'd fetch the XDR from your backend here
-        setStep(2);
-        toast.info("Biometric verification required...");
-
-        // This is a placeholder for the actual Soroban XDR invocation
-        // const signedTx = await signTransaction(XDR_FROM_BACKEND);
-
-        setStep(3);
-        toast.success("Ayuda Claimed Successfully!");
+      const data = (await response.json()) as {
+        status: string;
+        message: string;
+        result?: string | null;
       };
 
-    } catch (err: any) {
-      toast.error(err.message);
+      if (data.status === "success" && data.result?.includes("true")) {
+        setStatus("Credential verified. Wallet and certificate hash match.");
+      } else {
+        setStatus(data.message || "Verification did not confirm a match.");
+      }
+    } catch {
+      setStatus("Backend request failed.");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <Toaster theme="dark" position="top-center" />
-      <div className="w-full max-w-md border border-zinc-800 p-8 space-y-8 bg-zinc-950">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">Ayuda Portal</h1>
-          <p className="text-zinc-500 text-sm">Tap card & verify biometrics to claim aid.</p>
+    <main className="min-h-screen px-4 py-6 sm:px-6">
+      <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow)] sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
+              Employer check
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
+              Claim and verify
+            </h1>
+          </div>
+          <Link
+            href="/"
+            className="rounded-full border border-[var(--line)] px-4 py-2 text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
+          >
+            Back to dashboard
+          </Link>
         </div>
 
-        <div className="py-12 flex justify-center">
-          {step === 1 && <CreditCard className="w-20 h-20 text-white animate-pulse" />}
-          {step === 2 && <Fingerprint className="w-20 h-20 text-blue-500 animate-bounce" />}
-          {step === 3 && <CheckCircle className="w-20 h-20 text-green-500" />}
+        <div className="mt-8 grid gap-4">
+          <input
+            value={studentAddress}
+            onChange={(event) => setStudentAddress(event.target.value)}
+            placeholder="Student wallet"
+            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
+          />
+          <input
+            value={certificateHash}
+            onChange={(event) => setCertificateHash(event.target.value)}
+            placeholder="Certificate hash"
+            className="field-shell min-h-12 rounded-2xl px-4 font-mono outline-none"
+          />
         </div>
 
-        <button
-          onClick={startClaim}
-          disabled={loading || step === 3}
-          className="w-full py-4 bg-white text-black font-black uppercase hover:bg-zinc-200 transition-colors disabled:opacity-50"
-        >
-          {loading ? "Processing..." : step === 3 ? "Claimed" : "Initiate Claim"}
-        </button>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={handleScan}
+            className="min-h-12 flex-1 rounded-full bg-[var(--accent)] px-5 text-sm font-medium text-white transition hover:bg-[var(--accent-strong)]"
+          >
+            Scan certificate
+          </button>
+          <button
+            onClick={handleVerify}
+            disabled={isLoading}
+            className="min-h-12 flex-1 rounded-full bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? "Verifying..." : "Verify credential"}
+          </button>
+        </div>
+
+        <p className="mt-5 text-sm leading-6 text-[var(--muted)]">{status}</p>
       </div>
-    </div>
+    </main>
   );
-}
-
-async function hashSerial(serial: string) {
-  const msgUint8 = new TextEncoder().encode(serial);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
