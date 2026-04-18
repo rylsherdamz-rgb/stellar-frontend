@@ -46,7 +46,7 @@ export default function ClaimAyuda() {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <Toaster dark position="top-center" />
+      <Toaster theme="dark" position="top-center" />
       <div className="w-full max-w-md border border-zinc-800 p-8 space-y-8 bg-zinc-950">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tighter uppercase">Ayuda Portal</h1>
