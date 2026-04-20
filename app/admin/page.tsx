@@ -1,133 +1,113 @@
-"use client";
+"use client"
 
-import Link from "next/link";
-import { useState } from "react";
-import { scanNfc } from "@/lib/nfc";
+import React, { useState, useEffect } from 'react';
+import { AyudaAPI } from '@/lib/api';
+import { Scan, Lock, Loader2 } from 'lucide-react';
 
-const BACKEND_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3000/api";
+const AdminConsole = () => {
+  const [formData, setFormData] = useState({ name: '', address: '', amount: 50 });
+  const [nfcHash, setNfcHash] = useState<string | null>(null);
+  const [isFresh, setIsFresh] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-export default function AdminPortal() {
-  const [studentName, setStudentName] = useState("");
-  const [studentAddress, setStudentAddress] = useState("");
-  const [certificateHash, setCertificateHash] = useState("");
-  const [rewardAmount, setRewardAmount] = useState("100");
-  const [status, setStatus] = useState("Ready to register a certificate.");
-  const [isLoading, setIsLoading] = useState(false);
+  // Poll for NFC scans from your phone every 2 seconds
+  useEffect(() => {
+    const poll = setInterval(async () => {
+      try {
+        const data = await AyudaAPI.getLatestScan();
+        if (data.nfc_hash && data.is_fresh) {
+          setNfcHash(data.nfc_hash);
+          setIsFresh(true);
+        } else {
+          setIsFresh(false);
+        }
+      } catch (e) {
+        console.error("Backend unreachable");
+      }
+    }, 2000);
+    return () => clearInterval(poll);
+  }, []);
 
-  async function handleScan() {
-    setStatus("Scanning NFC card...");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-    try {
-      const hash = await scanNfc();
-      setCertificateHash(hash);
+    const result = await AyudaAPI.registerCitizen({
+      citizen_name: formData.name,
+      citizen_addr: formData.address,
+      nfc_hash: nfcHash || undefined,
+      amount: formData.amount
+    });
 
-      await fetch(`${BACKEND_BASE_URL}/scan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nfc_hash: hash }),
-      });
-
-      setStatus("Certificate hash captured and synced.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Unable to scan NFC card.");
+    if (result.status === 'success') {
+      alert("SUCCESS: Identity Committed to Ledger");
+      setNfcHash(null); // Clear for next scan
+    } else {
+      alert(`ERROR: ${result.message}`);
     }
-  }
-
-  async function handleRegister() {
-    if (!studentName || !studentAddress || !certificateHash) {
-      setStatus("Student name, wallet, and certificate hash are required.");
-      return;
-    }
-
-    setIsLoading(true);
-    setStatus("Registering certificate...");
-
-    try {
-      const response = await fetch(`${BACKEND_BASE_URL}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          student_name: studentName,
-          student_addr: studentAddress,
-          certificate_hash: certificateHash,
-          reward_amount: Number(rewardAmount) || 0,
-        }),
-      });
-      const data = (await response.json()) as { status: string; message: string };
-      setStatus(data.message);
-    } catch {
-      setStatus("Backend request failed.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
+    setLoading(false);
+  };
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6">
-      <div className="mx-auto max-w-3xl rounded-[2rem] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow)] sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-              Issuer console
-            </p>
-            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.05em]">
-              Admin registration
-            </h1>
+    <div className="grid grid-cols-12 gap-12 p-12">
+      {/* Registration Form */}
+      <section className="col-span-7 bg-white p-10 border-l-4 border-black shadow-sm">
+        <h3 className="font-[900] text-xl mb-10 uppercase italic">Identity Registration</h3>
+        <form onSubmit={handleSubmit} className="space-y-12">
+          <div className="relative">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-[#777777]">Full Name</label>
+            <input
+              className="w-full border-b border-[#c6c6c6] py-4 focus:outline-none focus:border-black font-bold text-xl"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+            />
           </div>
-          <Link
-            href="/"
-            className="rounded-full border border-[var(--line)] px-4 py-2 text-sm text-[var(--muted)] transition hover:border-[var(--accent)] hover:text-[var(--foreground)]"
-          >
-            Back to dashboard
-          </Link>
-        </div>
 
-        <div className="mt-8 grid gap-4">
-          <input
-            value={studentName}
-            onChange={(event) => setStudentName(event.target.value)}
-            placeholder="Student name"
-            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
-          />
-          <input
-            value={studentAddress}
-            onChange={(event) => setStudentAddress(event.target.value)}
-            placeholder="Stellar wallet"
-            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
-          />
-          <input
-            value={certificateHash}
-            onChange={(event) => setCertificateHash(event.target.value)}
-            placeholder="Certificate hash"
-            className="field-shell min-h-12 rounded-2xl px-4 font-mono outline-none"
-          />
-          <input
-            value={rewardAmount}
-            onChange={(event) => setRewardAmount(event.target.value)}
-            placeholder="Reward amount"
-            className="field-shell min-h-12 rounded-2xl px-4 outline-none"
-          />
-        </div>
+          <div className="relative">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-[#777777]">Stellar Address</label>
+            <input
+              className="w-full border-b border-[#c6c6c6] py-4 focus:outline-none focus:border-black font-['Space_Grotesk'] text-sm"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              required
+            />
+          </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button
-            onClick={handleScan}
-            className="min-h-12 flex-1 rounded-full bg-[var(--signal)] px-5 text-sm font-medium text-white transition hover:brightness-95"
+            type="submit"
+            disabled={loading || !isFresh}
+            className="w-full bg-black text-white py-6 font-[900] uppercase tracking-[0.3em] text-xs flex justify-center items-center gap-4 disabled:opacity-30"
           >
-            Scan NFC card
+            {loading ? <Loader2 className="animate-spin" /> : <>Commit to Ledger <Lock size={16} /></>}
           </button>
-          <button
-            onClick={handleRegister}
-            disabled={isLoading}
-            className="min-h-12 flex-1 rounded-full bg-[var(--foreground)] px-5 text-sm font-medium text-[var(--background)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? "Registering..." : "Register certificate"}
-          </button>
-        </div>
+        </form>
+      </section>
 
-        <p className="mt-5 text-sm leading-6 text-[var(--muted)]">{status}</p>
-      </div>
-    </main>
+      {/* NFC Status Sidebar */}
+      <section className="col-span-5">
+        <div className={`p-10 border ${isFresh ? 'bg-black text-white' : 'bg-[#eeeeee] text-[#777777]'} transition-all duration-500`}>
+          <div className="flex justify-between items-start mb-16">
+            <h3 className="font-[900] text-lg uppercase tracking-tighter">NFC Pairing</h3>
+            <div className={`px-4 py-1.5 rounded-full flex items-center gap-2 ${isFresh ? 'bg-white text-black' : 'bg-black text-white'}`}>
+              <Scan size={12} className={isFresh ? "" : "animate-pulse"} />
+              <span className="text-[9px] font-[900] uppercase tracking-widest">
+                {isFresh ? "SIGNAL CAPTURED" : "READY TO SCAN"}
+              </span>
+            </div>
+          </div>
+
+          <div className="font-['Space_Grotesk'] text-xs break-all opacity-80 mb-4">
+            {nfcHash ? `HASH: ${nfcHash}` : "Awaiting phone signal..."}
+          </div>
+
+          <p className="text-[10px] font-bold uppercase tracking-widest leading-loose">
+            {isFresh
+              ? "Biometric hash verified via mobile node. Ready for ledger commitment."
+              : "Scan the beneficiary's physical tag using the Ayuda Mobile Reader."}
+          </p>
+        </div>
+      </section>
+    </div>
   );
-}
+};

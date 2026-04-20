@@ -4,7 +4,7 @@ const stats = [
   {
     label: "Credential rails",
     value: "Soroban + Stellar",
-    note: "Registration, verification, and reward flow share one contract surface.",
+    note: "Registration, funding, and claiming now share one simplified contract flow.",
   },
   {
     label: "Primary region",
@@ -14,7 +14,7 @@ const stats = [
   {
     label: "Demo cycle",
     value: "< 2 min",
-    note: "Scan, register, verify, and show the reward path in a single walkthrough.",
+    note: "Register, open /claim, and release ayuda without depending on browser NFC support.",
   },
 ];
 

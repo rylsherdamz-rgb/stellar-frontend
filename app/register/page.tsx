@@ -15,9 +15,9 @@ export default function RegisterPage() {
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            ["Student wallet", "The destination Stellar address that owns the credential."],
-            ["Student name", "A readable identity label stored with the certificate record."],
-            ["Certificate hash", "A unique hash captured by NFC scan or manual input."],
+            ["Beneficiary wallet", "The Stellar address that will be used later on the claim page."],
+            ["Beneficiary name", "A readable label stored with the ayuda registration record."],
+            ["Ayuda amount", "The amount funded by the admin during the registration step."],
           ].map(([title, copy]) => (
             <div key={title} className="field-shell rounded-[1.5rem] p-5">
               <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">{title}</p>
@@ -34,7 +34,6 @@ export default function RegisterPage() {
 {`{
   "student_addr": "G...",
   "student_name": "Angela Dela Cruz",
-  "certificate_hash": "cert_hash_demo_001",
   "reward_amount": 100
 }`}
           </pre>
