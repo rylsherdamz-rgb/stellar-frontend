@@ -7,7 +7,7 @@ export interface ScanResponse {
   is_fresh: boolean;
 }
 
-export interface ClaimResponse {
+export interface TxResponse {
   xdr: string;
   status: string;
 }
@@ -31,7 +31,8 @@ export const AyudaBridge = {
     }
   },
 
-  register: async (name: string, addr: string) => {
+  register: async (name: string, addr: string): Promise<string> => {
+    // 1. Get the unsigned Registration XDR from backend
     const res = await fetch(`${BACKEND_URL}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -40,11 +41,23 @@ export const AyudaBridge = {
         citizen_addr: addr,
       }),
     });
-    return await res.json();
+
+    const data: TxResponse = await res.json();
+
+    if (!data.xdr) {
+      throw new Error(data.status || "Failed to generate registration transaction");
+    }
+
+    // 2. Trigger Admin signature pop-up
+    const signedXdr = await signTransaction(data.xdr, {
+      network: "TESTNET",
+    });
+
+    return signedXdr;
   },
 
   claim: async (beneficiaryAddr: string): Promise<string> => {
-    // 1. Get the XDR from the backend
+    // 1. Get the unsigned Claim XDR from backend
     const res = await fetch(`${BACKEND_URL}/api/claim`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -53,14 +66,13 @@ export const AyudaBridge = {
       }),
     });
 
-    const data: ClaimResponse = await res.json();
+    const data: TxResponse = await res.json();
 
     if (!data.xdr) {
       throw new Error(data.status || "Failed to generate claim transaction");
     }
 
-    // 2. Trigger the Freighter Pop-up
-    // This will return the signed XDR
+    // 2. Trigger Beneficiary signature pop-up
     const signedXdr = await signTransaction(data.xdr, {
       network: "TESTNET",
     });

@@ -5,9 +5,7 @@ import Head from 'next/head';
 import { AyudaBridge } from '@/lib/api';
 import { toast, Toaster } from 'sonner';
 import {
-  Fingerprint,
   Loader2,
-  Lock,
   CheckCircle2,
   ShieldCheck,
   Cpu
@@ -42,21 +40,29 @@ export default function AyudaAdminPortal() {
   };
 
   const handleCommit = async () => {
+    if (!form.name) {
+      toast.error("Name is required");
+      return;
+    }
     if (!form.beneficiaryAddr.startsWith("G") || form.beneficiaryAddr.length !== 56) {
       toast.error("Invalid Beneficiary Address");
       return;
     }
+
     setLoading(true);
     try {
-      const res = await AyudaBridge.register(form.name, form.beneficiaryAddr, 0);
-      if (res.status === "success") {
-        toast.success("Ledger Updated Successfully");
+      // 1. This now triggers the Freighter Pop-up for the Admin
+      const signedXdr = await AyudaBridge.register(form.name, form.beneficiaryAddr);
+
+      if (signedXdr) {
+        toast.success("Ledger Updated & Signed");
         setForm({ name: "", beneficiaryAddr: "" });
-      } else {
-        toast.error(res.message);
+        // Reset NFC state after successful registration
+        setNfc({ hash: null, is_fresh: false });
       }
-    } catch {
-      toast.error("Protocol Error: Check Node Connection");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Protocol Error: Transaction Rejected");
     } finally {
       setLoading(false);
     }
@@ -76,7 +82,7 @@ export default function AyudaAdminPortal() {
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-[#f3f3f4] rounded-sm">
               <span className={`w-1.5 h-1.5 rounded-full ${adminWallet ? 'bg-black' : 'bg-zinc-300'}`}></span>
               <span className="font-['Space_Grotesk'] text-[9px] font-bold tracking-widest uppercase">
-                {adminWallet ? 'Node Connected' : 'Authority Required'}
+                {adminWallet ? 'Authority Linked' : 'Authority Required'}
               </span>
             </div>
           </div>
@@ -105,7 +111,8 @@ export default function AyudaAdminPortal() {
                 <input
                   type="text"
                   value={form.name}
-                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors placeholder:text-zinc-200 text-lg font-bold"
+                  disabled={loading}
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors placeholder:text-zinc-200 text-lg font-bold disabled:opacity-50"
                   placeholder="Full Name"
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
@@ -115,7 +122,8 @@ export default function AyudaAdminPortal() {
                 <input
                   type="text"
                   value={form.beneficiaryAddr}
-                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors font-['Space_Grotesk'] text-sm tracking-tight"
+                  disabled={loading}
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors font-['Space_Grotesk'] text-sm tracking-tight disabled:opacity-50"
                   placeholder="G..."
                   onChange={(e) => setForm({ ...form, beneficiaryAddr: e.target.value })}
                 />
@@ -154,7 +162,7 @@ export default function AyudaAdminPortal() {
         <div className="max-w-6xl mx-auto px-8 flex justify-between items-center font-['Space_Grotesk'] text-[9px] tracking-[0.3em] text-[#777777] uppercase font-bold">
           <span>Ayuda Protocol // 2026</span>
           <span className="hidden sm:inline">The Digital Ledger of Truth</span>
-          <span>Status: Verified</span>
+          <span>Status: Admin Active</span>
         </div>
       </footer>
     </div>
