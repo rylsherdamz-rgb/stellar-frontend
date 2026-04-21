@@ -10,7 +10,6 @@ import {
   Wallet,
   ShieldCheck,
   ArrowRight,
-  Cpu,
   Lock
 } from 'lucide-react';
 
@@ -39,28 +38,29 @@ export default function ClaimPage() {
         setUserWallet(addr);
         toast.success("Wallet Linked to Session");
       }
-    } catch {
-      toast.error("Freighter Link Failed");
+    } catch (err: any) {
+      toast.error(err.message || "Freighter Link Failed");
     }
   };
 
   const handleClaim = async () => {
+    if (!userWallet) return toast.error("Connect wallet first");
+    if (!nfc.is_fresh) return toast.error("Tap your NFC card");
+
     setLoading(true);
     try {
-      const res = await fetch('https://ayuda-backend.onrender.com/api/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ beneficiary_addr: userWallet })
-      });
-      const data = await res.json();
+      // 1. Trigger the bridge claim logic
+      // This fetches XDR from backend and opens the Freighter Pop-up
+      const signedXdr = await AyudaBridge.claim(userWallet);
 
-      if (data.status === "success") {
-        toast.success("Aid Claimed Successfully!");
-      } else {
-        toast.error(data.message);
+      if (signedXdr) {
+        toast.success("Transaction Signed & Disbursed!");
+        // Optional: Reset NFC state after successful claim
+        setNfc({ hash: null, is_fresh: false });
       }
-    } catch {
-      toast.error("Network Error: Check Node Connection");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Claim Failed: Verification Mismatch");
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function ClaimPage() {
           </h2>
           <div className="bg-white p-10 border-l-4 border-black shadow-[0_24px_48px_rgba(26,28,28,0.06)]">
             <p className="text-xl font-medium tracking-tight leading-snug">
-              Authenticate your hardware and link your Stellar identity to authorize the disbursement.
+              Authenticate your hardware and sign the transaction with your wallet to authorize the disbursement.
             </p>
           </div>
         </header>
@@ -109,7 +109,7 @@ export default function ClaimPage() {
             </div>
           </div>
 
-          {/* Step 2: Wallet Authentication Button (Replaces Input) */}
+          {/* Step 2: Wallet Authentication */}
           <div className="bg-white border border-[#eeeeee] p-1">
             {!userWallet ? (
               <button
@@ -149,7 +149,7 @@ export default function ClaimPage() {
               <Loader2 className="animate-spin mx-auto" size={20} />
             ) : (
               <>
-                Initiate Disbursement
+                Sign & Claim Funds
                 <ArrowRight size={20} />
               </>
             )}
@@ -160,13 +160,13 @@ export default function ClaimPage() {
               <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Network State</p>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
-                <span className="font-bold text-[10px] uppercase tracking-tighter">Genesis Node Verifying</span>
+                <span className="font-bold text-[10px] uppercase tracking-tighter">Soroban VM Ready</span>
               </div>
             </div>
             <div className="bg-white border border-[#eeeeee] p-6">
               <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Ledger Record</p>
               <p className="font-['Space_Grotesk'] text-[10px] font-bold uppercase truncate opacity-30">
-                {nfc.hash ? `ID: ${nfc.hash.slice(0, 16)}` : "Awaiting Auth"}
+                {nfc.hash ? `NFC: ${nfc.hash.slice(0, 12)}...` : "Awaiting Auth"}
               </p>
             </div>
           </div>
