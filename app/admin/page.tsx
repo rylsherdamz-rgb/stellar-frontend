@@ -1,113 +1,162 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from 'react';
-import { AyudaAPI } from '@/lib/api';
-import { Scan, Lock, Loader2 } from 'lucide-react';
+import Head from 'next/head';
+import { AyudaBridge } from '@/lib/api';
+import { toast, Toaster } from 'sonner';
+import {
+  Fingerprint,
+  Loader2,
+  Lock,
+  CheckCircle2,
+  ShieldCheck,
+  Cpu
+} from 'lucide-react';
 
-const AdminConsole = () => {
-  const [formData, setFormData] = useState({ name: '', address: '', amount: 50 });
-  const [nfcHash, setNfcHash] = useState<string | null>(null);
-  const [isFresh, setIsFresh] = useState(false);
+export default function AyudaAdminPortal() {
+  const [adminWallet, setAdminWallet] = useState<string>("");
+  const [nfc, setNfc] = useState({ hash: null, is_fresh: false });
+  const [form, setForm] = useState({ name: "", beneficiaryAddr: "" });
   const [loading, setLoading] = useState(false);
 
-  // Poll for NFC scans from your phone every 2 seconds
   useEffect(() => {
-    const poll = setInterval(async () => {
-      try {
-        const data = await AyudaAPI.getLatestScan();
-        if (data.nfc_hash && data.is_fresh) {
-          setNfcHash(data.nfc_hash);
-          setIsFresh(true);
-        } else {
-          setIsFresh(false);
-        }
-      } catch (e) {
-        console.error("Backend unreachable");
+    const interval = setInterval(async () => {
+      const data = await AyudaBridge.getLatestScan();
+      if (data.is_fresh && !nfc.is_fresh) {
+        toast.success("NFC Handshake Captured", {
+          style: { background: '#000', color: '#fff', borderRadius: '0px', border: '1px solid #474747' }
+        });
       }
+      setNfc(data);
     }, 2000);
-    return () => clearInterval(poll);
-  }, []);
+    return () => clearInterval(interval);
+  }, [nfc.is_fresh]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const result = await AyudaAPI.registerCitizen({
-      citizen_name: formData.name,
-      citizen_addr: formData.address,
-      nfc_hash: nfcHash || undefined,
-      amount: formData.amount
-    });
-
-    if (result.status === 'success') {
-      alert("SUCCESS: Identity Committed to Ledger");
-      setNfcHash(null); // Clear for next scan
-    } else {
-      alert(`ERROR: ${result.message}`);
+  const handleConnect = async () => {
+    try {
+      const addr = await AyudaBridge.connectWallet();
+      if (addr) setAdminWallet(addr);
+    } catch {
+      toast.error("Freighter Link Failed");
     }
-    setLoading(false);
+  };
+
+  const handleCommit = async () => {
+    if (!form.beneficiaryAddr.startsWith("G") || form.beneficiaryAddr.length !== 56) {
+      toast.error("Invalid Beneficiary Address");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await AyudaBridge.register(form.name, form.beneficiaryAddr, 0);
+      if (res.status === "success") {
+        toast.success("Ledger Updated Successfully");
+        setForm({ name: "", beneficiaryAddr: "" });
+      } else {
+        toast.error(res.message);
+      }
+    } catch {
+      toast.error("Protocol Error: Check Node Connection");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="grid grid-cols-12 gap-12 p-12">
-      {/* Registration Form */}
-      <section className="col-span-7 bg-white p-10 border-l-4 border-black shadow-sm">
-        <h3 className="font-[900] text-xl mb-10 uppercase italic">Identity Registration</h3>
-        <form onSubmit={handleSubmit} className="space-y-12">
-          <div className="relative">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[#777777]">Full Name</label>
-            <input
-              className="w-full border-b border-[#c6c6c6] py-4 focus:outline-none focus:border-black font-bold text-xl"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-          </div>
+    <div className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c] font-['Inter'] selection:bg-black selection:text-white">
+      <Toaster position="bottom-right" />
+      <Head>
+        <title>AYUDA | The Digital Ledger of Truth</title>
+      </Head>
 
-          <div className="relative">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-[#777777]">Stellar Address</label>
-            <input
-              className="w-full border-b border-[#c6c6c6] py-4 focus:outline-none focus:border-black font-['Space_Grotesk'] text-sm"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || !isFresh}
-            className="w-full bg-black text-white py-6 font-[900] uppercase tracking-[0.3em] text-xs flex justify-center items-center gap-4 disabled:opacity-30"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <>Commit to Ledger <Lock size={16} /></>}
-          </button>
-        </form>
-      </section>
-
-      {/* NFC Status Sidebar */}
-      <section className="col-span-5">
-        <div className={`p-10 border ${isFresh ? 'bg-black text-white' : 'bg-[#eeeeee] text-[#777777]'} transition-all duration-500`}>
-          <div className="flex justify-between items-start mb-16">
-            <h3 className="font-[900] text-lg uppercase tracking-tighter">NFC Pairing</h3>
-            <div className={`px-4 py-1.5 rounded-full flex items-center gap-2 ${isFresh ? 'bg-white text-black' : 'bg-black text-white'}`}>
-              <Scan size={12} className={isFresh ? "" : "animate-pulse"} />
-              <span className="text-[9px] font-[900] uppercase tracking-widest">
-                {isFresh ? "SIGNAL CAPTURED" : "READY TO SCAN"}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-[#f3f3f4]">
+        <div className="max-w-6xl mx-auto px-8 py-5 flex justify-between items-center">
+          <div className="flex items-center gap-6">
+            <h1 className="font-black text-xl tracking-tighter uppercase text-black">AYUDA PROTOCOL</h1>
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-[#f3f3f4] rounded-sm">
+              <span className={`w-1.5 h-1.5 rounded-full ${adminWallet ? 'bg-black' : 'bg-zinc-300'}`}></span>
+              <span className="font-['Space_Grotesk'] text-[9px] font-bold tracking-widest uppercase">
+                {adminWallet ? 'Node Connected' : 'Authority Required'}
               </span>
             </div>
           </div>
+          <button
+            onClick={handleConnect}
+            className="bg-black text-white px-6 py-2.5 text-[10px] font-bold uppercase tracking-widest hover:opacity-80 transition-all rounded-[0.125rem]"
+          >
+            {adminWallet ? `ID: ${adminWallet.slice(0, 6)}...` : "Connect Admin"}
+          </button>
+        </div>
+      </nav>
 
-          <div className="font-['Space_Grotesk'] text-xs break-all opacity-80 mb-4">
-            {nfcHash ? `HASH: ${nfcHash}` : "Awaiting phone signal..."}
+      <main className="pt-32 pb-24 px-8 max-w-4xl mx-auto">
+        <header className="mb-16">
+          <p className="font-['Space_Grotesk'] text-xs tracking-[0.4em] uppercase text-[#777777] mb-2">Internal Ledger Console</p>
+          <h2 className="text-6xl font-black tracking-tighter uppercase leading-[0.9]">
+            Register <br /> <span className="text-zinc-300">Citizen.</span>
+          </h2>
+        </header>
+
+        <div className="bg-white border border-[#eeeeee] overflow-hidden shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            <section className="p-10 space-y-12 border-b md:border-b-0 md:border-r border-[#f3f3f4]">
+              <div className="relative">
+                <label className="font-['Space_Grotesk'] text-[10px] font-bold tracking-widest uppercase text-[#777777] absolute -top-4 left-0">Legal Identity</label>
+                <input
+                  type="text"
+                  value={form.name}
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors placeholder:text-zinc-200 text-lg font-bold"
+                  placeholder="Full Name"
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
+              </div>
+              <div className="relative">
+                <label className="font-['Space_Grotesk'] text-[10px] font-bold tracking-widest uppercase text-[#777777] absolute -top-4 left-0">Stellar Asset Address</label>
+                <input
+                  type="text"
+                  value={form.beneficiaryAddr}
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors font-['Space_Grotesk'] text-sm tracking-tight"
+                  placeholder="G..."
+                  onChange={(e) => setForm({ ...form, beneficiaryAddr: e.target.value })}
+                />
+              </div>
+            </section>
+
+            <section className={`p-10 flex flex-col justify-center items-center transition-colors duration-700 ${nfc.is_fresh ? "bg-black text-white" : "bg-[#f9f9f9]"}`}>
+              {nfc.is_fresh ? (
+                <div className="text-center animate-in fade-in zoom-in duration-500">
+                  <CheckCircle2 size={40} className="text-white mx-auto mb-4" />
+                  <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-widest font-bold mb-2">Hardware Linked</p>
+                  <p className="font-['Space_Grotesk'] text-[8px] opacity-40 break-all max-w-[180px] mx-auto">{nfc.hash}</p>
+                </div>
+              ) : (
+                <div className="text-center opacity-30">
+                  <Cpu size={40} className="mx-auto mb-4" />
+                  <p className="font-['Space_Grotesk'] text-[10px] uppercase tracking-widest font-bold">Awaiting NFC Card</p>
+                </div>
+              )}
+            </section>
           </div>
 
-          <p className="text-[10px] font-bold uppercase tracking-widest leading-loose">
-            {isFresh
-              ? "Biometric hash verified via mobile node. Ready for ledger commitment."
-              : "Scan the beneficiary's physical tag using the Ayuda Mobile Reader."}
-          </p>
+          <div className="p-1 border-t border-[#f3f3f4]">
+            <button
+              onClick={handleCommit}
+              disabled={loading || !nfc.is_fresh || !adminWallet}
+              className="w-full bg-black text-white py-8 font-black uppercase tracking-[0.5em] text-[11px] flex justify-center items-center gap-4 transition-all disabled:opacity-5 active:scale-[0.995]"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : <>Commit to Genesis <ShieldCheck size={16} /></>}
+            </button>
+          </div>
         </div>
-      </section>
+      </main>
+
+      <footer className="py-12 border-t border-[#f3f3f4] bg-white text-center">
+        <div className="max-w-6xl mx-auto px-8 flex justify-between items-center font-['Space_Grotesk'] text-[9px] tracking-[0.3em] text-[#777777] uppercase font-bold">
+          <span>Ayuda Protocol // 2026</span>
+          <span className="hidden sm:inline">The Digital Ledger of Truth</span>
+          <span>Status: Verified</span>
+        </div>
+      </footer>
     </div>
   );
-};
+}

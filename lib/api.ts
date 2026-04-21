@@ -1,69 +1,41 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+import { isConnected, requestAccess } from "@stellar/freighter-api";
 
-export interface RegisterPayload {
-  citizen_addr: string;
-  citizen_name: string;
-  nfc_hash?: string;
-  amount: number;
-}
-
-export interface ClaimPayload {
-  nfc_hash: string;
-}
-
-export interface ApiResponse {
-  status: 'success' | 'error';
-  message: string;
-  amount?: number;
-  tx_hash?: string;
-  details?: string;
-}
+const BACKEND_URL = 'https://ayuda-backend.onrender.com';
 
 export interface ScanResponse {
   nfc_hash: string | null;
   is_fresh: boolean;
 }
 
-export const AyudaAPI = {
-  /**
-   * Polls the backend for the most recent NFC scan captured by the phone.
-   */
+export const AyudaBridge = {
+  connectWallet: async (): Promise<string | null> => {
+    const connection = await isConnected();
+    if (connection && connection.isConnected) {
+      const access = await requestAccess();
+      return access.address || null;
+    }
+    throw new Error("Freighter Not Found");
+  },
+
   getLatestScan: async (): Promise<ScanResponse> => {
-    const res = await fetch(`${BACKEND_URL}/api/latest-scan`);
-    if (!res.ok) throw new Error('Failed to fetch scan signal');
-    return res.json();
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/latest-scan`);
+      return await res.json();
+    } catch {
+      return { nfc_hash: null, is_fresh: false };
+    }
   },
 
-  /**
-   * Admin-only: Commits a new identity to the ledger and funds it.
-   */
-  registerCitizen: async (payload: RegisterPayload): Promise<ApiResponse> => {
+  register: async (name: string, addr: string, amount: number) => {
     const res = await fetch(`${BACKEND_URL}/api/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        citizen_name: name,
+        citizen_addr: addr,
+        amount: amount
+      }),
     });
-    return res.json();
-  },
-
-  /**
-   * Beneficiary-only: Initiates the claim process using the NFC handshake.
-   */
-  claimAid: async (nfcHash: string): Promise<ApiResponse> => {
-    const payload: ClaimPayload = { nfc_hash: nfcHash };
-    const res = await fetch(`${BACKEND_URL}/api/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    return res.json();
-  },
-
-  /**
-   * Utility: Checks health of the bridge connection.
-   */
-  checkHealth: async (): Promise<ApiResponse> => {
-    const res = await fetch(`${BACKEND_URL}/api/health`);
-    return res.json();
+    return await res.json();
   }
 };

@@ -1,140 +1,191 @@
 "use client";
+
 import React, { useState, useEffect } from 'react';
-import { AyudaAPI } from '@/lib/api';
-import { Scan, ArrowRight, ShieldCheck, Loader2, Landmark } from 'lucide-react';
+import Head from 'next/head';
+import { AyudaBridge } from '@/lib/api';
+import { toast, Toaster } from 'sonner';
+import {
+  Fingerprint,
+  Loader2,
+  Wallet,
+  ShieldCheck,
+  ArrowRight,
+  Cpu,
+  Lock
+} from 'lucide-react';
 
 export default function ClaimPage() {
-  const [claimStatus, setClaimStatus] = useState<'idle' | 'scanning' | 'verifying' | 'success' | 'error'>('idle');
-  const [aidData, setAidData] = useState<{ amount: number; hash: string } | null>(null);
+  const [userWallet, setUserWallet] = useState<string>("");
+  const [nfc, setNfc] = useState({ hash: null, is_fresh: false });
+  const [loading, setLoading] = useState(false);
 
-  // Poll for the phone's NFC scan signal
   useEffect(() => {
-    const poll = setInterval(async () => {
-      if (claimStatus !== 'idle') return;
-      try {
-        const data = await AyudaAPI.getLatestScan();
-        if (data.nfc_hash && data.is_fresh) {
-          setClaimStatus('verifying');
-          handleClaim(data.nfc_hash);
-        }
-      } catch (e) {
-        console.error("Signal Lost");
+    const interval = setInterval(async () => {
+      const data = await AyudaBridge.getLatestScan();
+      if (data.is_fresh && !nfc.is_fresh) {
+        toast.success("Card Identity Verified", {
+          style: { background: '#000', color: '#fff', borderRadius: '0px', border: '1px solid #474747' }
+        });
       }
+      setNfc(data);
     }, 2000);
-    return () => clearInterval(poll);
-  }, [claimStatus]);
+    return () => clearInterval(interval);
+  }, [nfc.is_fresh]);
 
-  const handleClaim = async (hash: string) => {
-    // In a real scenario, we'd use the user's wallet address from their session/auth
-    // For this bridge, we assume the NFC hash maps to their identity on-chain
+  const handleConnect = async () => {
     try {
-      const result = await AyudaAPI.claimAid(hash);
-      if (result.status === 'success') {
-        setAidData({ amount: result.amount, hash: result.tx_hash });
-        setClaimStatus('success');
-      } else {
-        setClaimStatus('error');
+      const addr = await AyudaBridge.connectWallet();
+      if (addr) {
+        setUserWallet(addr);
+        toast.success("Wallet Linked to Session");
       }
-    } catch (err) {
-      setClaimStatus('error');
+    } catch {
+      toast.error("Freighter Link Failed");
+    }
+  };
+
+  const handleClaim = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('https://ayuda-backend.onrender.com/api/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beneficiary_addr: userWallet })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        toast.success("Aid Claimed Successfully!");
+      } else {
+        toast.error(data.message);
+      }
+    } catch {
+      toast.error("Network Error: Check Node Connection");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white text-black font-['Inter'] selection:bg-black selection:text-white">
-      <main className="max-w-screen-2xl mx-auto min-h-screen grid grid-cols-1 lg:grid-cols-2">
+    <div className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c] font-['Inter'] selection:bg-black selection:text-white">
+      <Toaster position="bottom-right" />
+      <Head>
+        <title>AYUDA | Claim Relief</title>
+      </Head>
 
-        {/* Visual Narrative Side */}
-        <section className="bg-[#000000] text-white p-12 md:p-24 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-16">
-              <div className="w-8 h-8 bg-white" />
-              <h1 className="font-[900] uppercase italic tracking-tighter text-xl">Ayuda Protocol</h1>
-            </div>
-            <h2 className="text-6xl md:text-8xl font-[900] uppercase italic tracking-tighter leading-[0.85] mb-8">
-              Claim<br />Your<br />Freedom.
-            </h2>
-            <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.4em] uppercase opacity-50 max-w-xs leading-loose">
-              Direct-to-beneficiary aid distribution secured by the Stellar Network. No middlemen. No delays.
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-[#f3f3f4]">
+        <div className="max-w-6xl mx-auto px-8 py-6 flex justify-between items-center">
+          <h1 className="font-black text-2xl tracking-tighter uppercase text-black">AYUDA PROTOCOL</h1>
+          <span className="font-['Space_Grotesk'] text-[10px] tracking-[0.3em] text-[#777777] uppercase font-bold">
+            Verified Gateway V1.0.4
+          </span>
+        </div>
+      </nav>
+
+      <main className="pt-40 pb-24 px-6 max-w-xl mx-auto flex flex-col justify-center min-h-[90vh]">
+        <header className="mb-12">
+          <p className="font-['Space_Grotesk'] text-[10px] tracking-[0.4em] uppercase text-[#777777] mb-4">Protocol Interface // Claim_Funds</p>
+          <h2 className="text-6xl md:text-7xl font-black tracking-tighter uppercase leading-[0.85] mb-8">
+            Claim Your <br /> <span className="text-zinc-300">Ayuda.</span>
+          </h2>
+          <div className="bg-white p-10 border-l-4 border-black shadow-[0_24px_48px_rgba(26,28,28,0.06)]">
+            <p className="text-xl font-medium tracking-tight leading-snug">
+              Authenticate your hardware and link your Stellar identity to authorize the disbursement.
             </p>
           </div>
+        </header>
 
-          <div className="flex items-center gap-8">
-            <div className="flex -space-x-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-12 h-12 rounded-none border-2 border-black bg-[#1a1c1c] flex items-center justify-center font-bold text-xs">
-                  0{i}
-                </div>
-              ))}
+        <section className="space-y-6">
+          {/* Step 1: Hardware Verification */}
+          <div className={`flex items-center gap-6 p-8 transition-colors duration-500 ${nfc.is_fresh ? "bg-black text-white" : "bg-[#f3f3f4]"}`}>
+            <div className={`w-14 h-14 flex items-center justify-center rounded-[0.125rem] ${nfc.is_fresh ? "bg-white text-black" : "bg-black text-white"}`}>
+              {nfc.is_fresh ? <ShieldCheck size={28} /> : <Fingerprint size={28} />}
             </div>
-            <p className="text-[9px] font-bold uppercase tracking-widest opacity-40">Verification Nodes Active</p>
+            <div>
+              <p className={`font-['Space_Grotesk'] text-[9px] tracking-widest uppercase font-bold mb-1 ${nfc.is_fresh ? "text-zinc-400" : "text-[#777777]"}`}>Hardware Status</p>
+              <p className="font-bold text-lg tracking-tight uppercase">
+                {nfc.is_fresh ? "NFC Identity Verified" : "Awaiting Card Contact..."}
+              </p>
+            </div>
           </div>
-        </section>
 
-        {/* Interaction Side */}
-        <section className="p-12 md:p-24 flex flex-col justify-center bg-[#f9f9f9]">
-          <div className="max-w-md mx-auto w-full">
-            {claimStatus === 'idle' && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-                <div className="w-20 h-20 bg-black flex items-center justify-center">
-                  <Scan className="text-white w-10 h-10 animate-pulse" />
+          {/* Step 2: Wallet Authentication Button (Replaces Input) */}
+          <div className="bg-white border border-[#eeeeee] p-1">
+            {!userWallet ? (
+              <button
+                onClick={handleConnect}
+                className="w-full flex items-center justify-between p-8 group hover:bg-[#fcfcfc] transition-colors"
+              >
+                <div className="text-left">
+                  <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase font-bold text-[#777777] mb-1">Authorization Required</p>
+                  <p className="font-bold text-lg tracking-tight uppercase">Connect Freighter Wallet</p>
                 </div>
-                <div>
-                  <h3 className="text-3xl font-[900] uppercase italic tracking-tighter mb-4">Awaiting Handshake</h3>
-                  <p className="text-sm font-medium text-neutral-500 leading-relaxed">
-                    Tap your Ayuda NFC Tag against your mobile device to initiate the ledger claim.
+                <div className="p-3 bg-black text-white group-hover:scale-110 transition-transform">
+                  <Wallet size={20} />
+                </div>
+              </button>
+            ) : (
+              <div className="w-full flex items-center justify-between p-8 bg-[#fcfcfc]">
+                <div className="text-left overflow-hidden">
+                  <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase font-bold text-emerald-600 mb-1">Identity Linked</p>
+                  <p className="font-['Space_Grotesk'] text-sm font-bold tracking-tighter truncate opacity-60">
+                    {userWallet}
                   </p>
                 </div>
-                <div className="pt-12 border-t border-black/5">
-                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Listening for hardware signal...
-                  </div>
+                <div className="p-3 text-emerald-600">
+                  <Lock size={20} />
                 </div>
-              </div>
-            )}
-
-            {claimStatus === 'verifying' && (
-              <div className="text-center space-y-8">
-                <Loader2 className="w-16 h-16 animate-spin mx-auto text-black" />
-                <h3 className="text-xl font-bold uppercase tracking-widest italic">Decrypting Ledger...</h3>
-              </div>
-            )}
-
-            {claimStatus === 'success' && (
-              <div className="space-y-10 animate-in zoom-in-95 duration-500">
-                <div className="w-20 h-20 bg-black text-white flex items-center justify-center">
-                  <ShieldCheck className="w-10 h-10" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2">Transaction Confirmed</p>
-                  <h3 className="text-5xl font-[900] uppercase italic tracking-tighter mb-6">
-                    {aidData?.amount} <span className="text-2xl not-italic font-light">XLM</span>
-                  </h3>
-                  <div className="p-6 bg-white border-l-4 border-black space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold uppercase text-neutral-400">Status</span>
-                      <span className="text-[9px] font-bold uppercase">Finalized</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold uppercase text-neutral-400">Hash</span>
-                      <span className="text-[9px] font-['Space_Grotesk'] font-bold truncate ml-8">
-                        {aidData?.hash || '7f3e...a21b'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="group flex items-center gap-4 text-[10px] font-[900] uppercase tracking-[0.4em] pt-8"
-                >
-                  Return to Terminal <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-                </button>
               </div>
             )}
           </div>
+
+          {/* Step 3: Execution */}
+          <button
+            onClick={handleClaim}
+            disabled={loading || !nfc.is_fresh || !userWallet}
+            className="w-full bg-black text-white py-8 px-10 font-black uppercase tracking-[0.5em] text-[11px] flex justify-between items-center transition-all disabled:opacity-5 active:scale-[0.99]"
+          >
+            {loading ? (
+              <Loader2 className="animate-spin mx-auto" size={20} />
+            ) : (
+              <>
+                Initiate Disbursement
+                <ArrowRight size={20} />
+              </>
+            )}
+          </button>
+
+          <div className="grid grid-cols-2 gap-1 mt-6">
+            <div className="bg-[#eeeeee] p-6">
+              <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Network State</p>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
+                <span className="font-bold text-[10px] uppercase tracking-tighter">Genesis Node Verifying</span>
+              </div>
+            </div>
+            <div className="bg-white border border-[#eeeeee] p-6">
+              <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Ledger Record</p>
+              <p className="font-['Space_Grotesk'] text-[10px] font-bold uppercase truncate opacity-30">
+                {nfc.hash ? `ID: ${nfc.hash.slice(0, 16)}` : "Awaiting Auth"}
+              </p>
+            </div>
+          </div>
         </section>
+
+        <footer className="mt-20 pt-12 border-t border-[#f3f3f4] flex flex-col items-center gap-8">
+          <div className="flex gap-8 font-['Space_Grotesk'] text-[9px] tracking-[0.3em] text-[#777777] uppercase font-bold">
+            <span>Whitepaper</span>
+            <span>Security Audit</span>
+            <span>Terms</span>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="font-black text-[10px] tracking-[0.2em] uppercase">© 2026 AYUDA PROTOCOL</p>
+            <p className="font-['Space_Grotesk'] text-[9px] tracking-[0.4em] text-zinc-300 uppercase">The Digital Ledger of Truth</p>
+          </div>
+        </footer>
       </main>
+
+      <div className="fixed top-0 right-0 w-1/3 h-screen bg-[#f3f3f4]/50 -z-10 pointer-events-none"></div>
     </div>
   );
 }
