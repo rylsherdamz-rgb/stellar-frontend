@@ -55,14 +55,14 @@ export default function AyudaAdminPortal() {
       const signedXdr = await AyudaBridge.register(form.name, form.beneficiaryAddr);
 
       if (signedXdr) {
-        toast.success("Ledger Updated & Signed");
+        toast.success("Successfully added");
         setForm({ name: "", beneficiaryAddr: "" });
         // Reset NFC state after successful registration
         setNfc({ hash: null, is_fresh: false });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message || "Protocol Error: Transaction Rejected");
+      toast.error(err instanceof Error ? err.message : "Protocol Error: Transaction Rejected");
     } finally {
       setLoading(false);
     }

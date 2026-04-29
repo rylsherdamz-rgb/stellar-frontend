@@ -42,7 +42,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/claim" className="bg-black text-white px-10 py-6 font-black uppercase tracking-[0.3em] text-[11px] flex items-center justify-between group">
-                Claim My Aid <ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform" size={18} />
+                <p className="text-white">Claim My Aid</p> <ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform" size={18} />
               </Link>
               <Link href="/admin" className="bg-white border border-[#eeeeee] text-black px-10 py-6 font-black uppercase tracking-[0.3em] text-[11px] hover:bg-[#f3f3f4] transition-colors">
                 Staff Login

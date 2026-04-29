@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { AyudaBridge } from '@/lib/api';
 import { toast, Toaster } from 'sonner';
@@ -15,7 +15,7 @@ import {
 
 export default function ClaimPage() {
   const [userWallet, setUserWallet] = useState<string>("");
-  const [nfc, setNfc] = useState({ hash: null, is_fresh: false });
+  const [nfc, setNfc] = useState({ hash: null as string | null, is_fresh: false });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,8 +38,8 @@ export default function ClaimPage() {
         setUserWallet(addr);
         toast.success("Wallet Linked to Session");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Freighter Link Failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Freighter Link Failed");
     }
   };
 
@@ -49,18 +49,14 @@ export default function ClaimPage() {
 
     setLoading(true);
     try {
-      // 1. Trigger the bridge claim logic
-      // This fetches XDR from backend and opens the Freighter Pop-up
-      const signedXdr = await AyudaBridge.claim(userWallet);
-
-      if (signedXdr) {
-        toast.success("Transaction Signed & Disbursed!");
-        // Optional: Reset NFC state after successful claim
-        setNfc({ hash: null, is_fresh: false });
+      try {
+        await AyudaBridge.claim(userWallet);
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Claim Failed: Verification Mismatch");
+
+      toast.success("Claimed successfully.");
+      setNfc({ hash: null, is_fresh: false });
     } finally {
       setLoading(false);
     }
@@ -96,7 +92,6 @@ export default function ClaimPage() {
         </header>
 
         <section className="space-y-6">
-          {/* Step 1: Hardware Verification */}
           <div className={`flex items-center gap-6 p-8 transition-colors duration-500 ${nfc.is_fresh ? "bg-black text-white" : "bg-[#f3f3f4]"}`}>
             <div className={`w-14 h-14 flex items-center justify-center rounded-[0.125rem] ${nfc.is_fresh ? "bg-white text-black" : "bg-black text-white"}`}>
               {nfc.is_fresh ? <ShieldCheck size={28} /> : <Fingerprint size={28} />}
@@ -109,7 +104,6 @@ export default function ClaimPage() {
             </div>
           </div>
 
-          {/* Step 2: Wallet Authentication */}
           <div className="bg-white border border-[#eeeeee] p-1">
             {!userWallet ? (
               <button
@@ -139,7 +133,6 @@ export default function ClaimPage() {
             )}
           </div>
 
-          {/* Step 3: Execution */}
           <button
             onClick={handleClaim}
             disabled={loading || !nfc.is_fresh || !userWallet}

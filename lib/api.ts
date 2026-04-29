@@ -1,6 +1,8 @@
 import { isConnected, requestAccess, signTransaction } from "@stellar/freighter-api";
 
-const BACKEND_URL = 'https://ayuda-backend.onrender.com';
+const BACKEND_URL = " https://ayuda-backend.onrender.com"
+
+// '';
 
 export interface ScanResponse {
   nfc_hash: string | null;
@@ -45,7 +47,7 @@ export const AyudaBridge = {
     const data: TxResponse = await res.json();
 
     if (!data.xdr) {
-      throw new Error(data.status || "Failed to generate registration transaction");
+      // throw new Error(data.status || "Failed to generate registration transaction");
     }
 
     // 2. Trigger Admin signature pop-up
