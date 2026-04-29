@@ -42,7 +42,13 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/claim" className="bg-black text-white px-10 py-6 font-black uppercase tracking-[0.3em] text-[11px] flex items-center justify-between group">
+<<<<<<< HEAD
                 <p className="text-white">Claim My Aid</p> <ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform" size={18} />
+=======
+                <p className="text-white">
+                  Claim My Aid
+                </p><ArrowRight className="ml-4 group-hover:translate-x-2 transition-transform text-white" size={18} />
+>>>>>>> 8763df4 (pushed the code)
               </Link>
               <Link href="/admin" className="bg-white border border-[#eeeeee] text-black px-10 py-6 font-black uppercase tracking-[0.3em] text-[11px] hover:bg-[#f3f3f4] transition-colors">
                 Staff Login
@@ -103,9 +109,17 @@ export default function LandingPage() {
         <section className="py-32 bg-white text-center">
           <div className="max-w-3xl mx-auto px-8">
             <h2 className="text-6xl font-black tracking-tighter uppercase mb-8">Ready to <span className="text-zinc-300">start?</span></h2>
+<<<<<<< HEAD
             <p className="font-['Space_Grotesk'] text-sm tracking-widest uppercase text-[#777777] mb-12">Authorized by Genesis Node Protocol</p>
             <Link href="/claim" className="inline-block bg-black text-white px-16 py-8 font-black uppercase tracking-[0.5em] text-[12px] hover:opacity-90 transition-opacity">
               Connect My Wallet
+=======
+            <p className="font-['Space_Grotesk'] text-sm tracking-widest uppercase text-[#777777] mb-12">Authorized by Stellar Node Protocol</p>
+            <Link href="/claim" className="inline-block bg-black text-white px-16 py-8 font-black uppercase tracking-[0.5em] text-[12px] hover:opacity-90 transition-opacity">
+              <p className="text-white">
+                Connect My Wallet
+              </p>
+>>>>>>> 8763df4 (pushed the code)
             </Link>
           </div>
         </section>

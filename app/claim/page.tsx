@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
+=======
+import React, { useState, useEffect } from 'react';
+>>>>>>> 8763df4 (pushed the code)
 import Head from 'next/head';
 import { AyudaBridge } from '@/lib/api';
 import { toast, Toaster } from 'sonner';
@@ -10,12 +14,20 @@ import {
   Wallet,
   ShieldCheck,
   ArrowRight,
+<<<<<<< HEAD
+=======
+  Cpu,
+>>>>>>> 8763df4 (pushed the code)
   Lock
 } from 'lucide-react';
 
 export default function ClaimPage() {
   const [userWallet, setUserWallet] = useState<string>("");
+<<<<<<< HEAD
   const [nfc, setNfc] = useState({ hash: null as string | null, is_fresh: false });
+=======
+  const [nfc, setNfc] = useState({ hash: null, is_fresh: false });
+>>>>>>> 8763df4 (pushed the code)
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,12 +50,18 @@ export default function ClaimPage() {
         setUserWallet(addr);
         toast.success("Wallet Linked to Session");
       }
+<<<<<<< HEAD
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Freighter Link Failed");
+=======
+    } catch {
+      toast.error("Freighter Link Failed");
+>>>>>>> 8763df4 (pushed the code)
     }
   };
 
   const handleClaim = async () => {
+<<<<<<< HEAD
     if (!userWallet) return toast.error("Connect wallet first");
     if (!nfc.is_fresh) return toast.error("Tap your NFC card");
 
@@ -57,6 +75,24 @@ export default function ClaimPage() {
 
       toast.success("Claimed successfully.");
       setNfc({ hash: null, is_fresh: false });
+=======
+    setLoading(true);
+    try {
+      const res = await fetch('https://ayuda-backend.onrender.com/api/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ beneficiary_addr: userWallet })
+      });
+      const data = await res.json();
+
+      if (data.status === "success") {
+        toast.success("Aid Claimed Successfully!");
+      } else {
+        toast.error(data.message);
+      }
+    } catch {
+      toast.error("Network Error: Check Node Connection");
+>>>>>>> 8763df4 (pushed the code)
     } finally {
       setLoading(false);
     }
@@ -86,12 +122,20 @@ export default function ClaimPage() {
           </h2>
           <div className="bg-white p-10 border-l-4 border-black shadow-[0_24px_48px_rgba(26,28,28,0.06)]">
             <p className="text-xl font-medium tracking-tight leading-snug">
+<<<<<<< HEAD
               Authenticate your hardware and sign the transaction with your wallet to authorize the disbursement.
+=======
+              Authenticate your hardware and link your Stellar identity to authorize the disbursement.
+>>>>>>> 8763df4 (pushed the code)
             </p>
           </div>
         </header>
 
         <section className="space-y-6">
+<<<<<<< HEAD
+=======
+          {/* Step 1: Hardware Verification */}
+>>>>>>> 8763df4 (pushed the code)
           <div className={`flex items-center gap-6 p-8 transition-colors duration-500 ${nfc.is_fresh ? "bg-black text-white" : "bg-[#f3f3f4]"}`}>
             <div className={`w-14 h-14 flex items-center justify-center rounded-[0.125rem] ${nfc.is_fresh ? "bg-white text-black" : "bg-black text-white"}`}>
               {nfc.is_fresh ? <ShieldCheck size={28} /> : <Fingerprint size={28} />}
@@ -104,6 +148,10 @@ export default function ClaimPage() {
             </div>
           </div>
 
+<<<<<<< HEAD
+=======
+          {/* Step 2: Wallet Authentication Button (Replaces Input) */}
+>>>>>>> 8763df4 (pushed the code)
           <div className="bg-white border border-[#eeeeee] p-1">
             {!userWallet ? (
               <button
@@ -133,6 +181,10 @@ export default function ClaimPage() {
             )}
           </div>
 
+<<<<<<< HEAD
+=======
+          {/* Step 3: Execution */}
+>>>>>>> 8763df4 (pushed the code)
           <button
             onClick={handleClaim}
             disabled={loading || !nfc.is_fresh || !userWallet}
@@ -142,7 +194,11 @@ export default function ClaimPage() {
               <Loader2 className="animate-spin mx-auto" size={20} />
             ) : (
               <>
+<<<<<<< HEAD
                 Sign & Claim Funds
+=======
+                Initiate Disbursement
+>>>>>>> 8763df4 (pushed the code)
                 <ArrowRight size={20} />
               </>
             )}
@@ -153,13 +209,21 @@ export default function ClaimPage() {
               <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Network State</p>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
+<<<<<<< HEAD
                 <span className="font-bold text-[10px] uppercase tracking-tighter">Soroban VM Ready</span>
+=======
+                <span className="font-bold text-[10px] uppercase tracking-tighter">Stellar Node Verifying</span>
+>>>>>>> 8763df4 (pushed the code)
               </div>
             </div>
             <div className="bg-white border border-[#eeeeee] p-6">
               <p className="font-['Space_Grotesk'] text-[9px] tracking-widest uppercase text-[#777777] mb-4">Ledger Record</p>
               <p className="font-['Space_Grotesk'] text-[10px] font-bold uppercase truncate opacity-30">
+<<<<<<< HEAD
                 {nfc.hash ? `NFC: ${nfc.hash.slice(0, 12)}...` : "Awaiting Auth"}
+=======
+                {nfc.hash ? `ID: ${nfc.hash.slice(0, 16)}` : "Awaiting Auth"}
+>>>>>>> 8763df4 (pushed the code)
               </p>
             </div>
           </div>

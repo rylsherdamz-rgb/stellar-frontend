@@ -5,7 +5,13 @@ import Head from 'next/head';
 import { AyudaBridge } from '@/lib/api';
 import { toast, Toaster } from 'sonner';
 import {
+<<<<<<< HEAD
   Loader2,
+=======
+  Fingerprint,
+  Loader2,
+  Lock,
+>>>>>>> 8763df4 (pushed the code)
   CheckCircle2,
   ShieldCheck,
   Cpu
@@ -40,14 +46,18 @@ export default function AyudaAdminPortal() {
   };
 
   const handleCommit = async () => {
+<<<<<<< HEAD
     if (!form.name) {
       toast.error("Name is required");
       return;
     }
+=======
+>>>>>>> 8763df4 (pushed the code)
     if (!form.beneficiaryAddr.startsWith("G") || form.beneficiaryAddr.length !== 56) {
       toast.error("Invalid Beneficiary Address");
       return;
     }
+<<<<<<< HEAD
 
     setLoading(true);
     try {
@@ -63,6 +73,19 @@ export default function AyudaAdminPortal() {
     } catch (err: unknown) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Protocol Error: Transaction Rejected");
+=======
+    setLoading(true);
+    try {
+      const res = await AyudaBridge.register(form.name, form.beneficiaryAddr, 0);
+      if (res.status === "success") {
+        toast.success("Ledger Updated Successfully");
+        setForm({ name: "", beneficiaryAddr: "" });
+      } else {
+        toast.error(res.message);
+      }
+    } catch {
+      toast.error("Protocol Error: Check Node Connection");
+>>>>>>> 8763df4 (pushed the code)
     } finally {
       setLoading(false);
     }
@@ -82,7 +105,11 @@ export default function AyudaAdminPortal() {
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-[#f3f3f4] rounded-sm">
               <span className={`w-1.5 h-1.5 rounded-full ${adminWallet ? 'bg-black' : 'bg-zinc-300'}`}></span>
               <span className="font-['Space_Grotesk'] text-[9px] font-bold tracking-widest uppercase">
+<<<<<<< HEAD
                 {adminWallet ? 'Authority Linked' : 'Authority Required'}
+=======
+                {adminWallet ? 'Node Connected' : 'Authority Required'}
+>>>>>>> 8763df4 (pushed the code)
               </span>
             </div>
           </div>
@@ -111,8 +138,12 @@ export default function AyudaAdminPortal() {
                 <input
                   type="text"
                   value={form.name}
+<<<<<<< HEAD
                   disabled={loading}
                   className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors placeholder:text-zinc-200 text-lg font-bold disabled:opacity-50"
+=======
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors placeholder:text-zinc-200 text-lg font-bold"
+>>>>>>> 8763df4 (pushed the code)
                   placeholder="Full Name"
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
@@ -122,8 +153,12 @@ export default function AyudaAdminPortal() {
                 <input
                   type="text"
                   value={form.beneficiaryAddr}
+<<<<<<< HEAD
                   disabled={loading}
                   className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors font-['Space_Grotesk'] text-sm tracking-tight disabled:opacity-50"
+=======
+                  className="w-full bg-transparent border-0 border-b border-[#eeeeee] py-4 focus:ring-0 focus:border-black transition-colors font-['Space_Grotesk'] text-sm tracking-tight"
+>>>>>>> 8763df4 (pushed the code)
                   placeholder="G..."
                   onChange={(e) => setForm({ ...form, beneficiaryAddr: e.target.value })}
                 />
@@ -150,9 +185,15 @@ export default function AyudaAdminPortal() {
             <button
               onClick={handleCommit}
               disabled={loading || !nfc.is_fresh || !adminWallet}
+<<<<<<< HEAD
               className="w-full bg-black text-white py-8 font-black uppercase tracking-[0.5em] text-[11px] flex justify-center items-center gap-4 transition-all disabled:opacity-5 active:scale-[0.995]"
             >
               {loading ? <Loader2 className="animate-spin" size={18} /> : <>Commit to Genesis <ShieldCheck size={16} /></>}
+=======
+              className="w-full rounded-2xl bg-black shadow-md text-white py-8 font-black uppercase tracking-[0.5em] text-[11px] flex justify-center items-center gap-4 transition-all disabled:opacity-5 active:scale-[0.995]"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : <>Commit to Chain <ShieldCheck size={16} /></>}
+>>>>>>> 8763df4 (pushed the code)
             </button>
           </div>
         </div>
@@ -162,7 +203,11 @@ export default function AyudaAdminPortal() {
         <div className="max-w-6xl mx-auto px-8 flex justify-between items-center font-['Space_Grotesk'] text-[9px] tracking-[0.3em] text-[#777777] uppercase font-bold">
           <span>Ayuda Protocol // 2026</span>
           <span className="hidden sm:inline">The Digital Ledger of Truth</span>
+<<<<<<< HEAD
           <span>Status: Admin Active</span>
+=======
+          <span>Status: Verified</span>
+>>>>>>> 8763df4 (pushed the code)
         </div>
       </footer>
     </div>
